@@ -373,30 +373,15 @@ async function processForecast() {
       } else {
         // אין תנאים טובים
         if (existingEvent && !existingEvent.summary.includes('התנאים נחלשו')) {
-          // הידרדרות - עדכן כותרת
-          console.log(`  ↘️  Conditions degraded - updating event title`);
+          // הידרדרות - מחק את האירוע במקום לעדכן אותו
+          console.log(`  ↘️  Conditions degraded - deleting event`);
 
-          const degradedTitle = 'חלון גלישה - התנאים נחלשו';
-          const lastKnownGood = existingEvent.description.match(/גובה גל: ([\d.]+) מטר/) ?
-            existingEvent.description : 'תחזית מעודכנת לא זמינה';
-
-          const degradedDescription = `התנאים הידרדרו מתחת לסף הנדרש
-
-${lastKnownGood ? `תחזית אחרונה: ${lastKnownGood[0]}` : 'נתוני תחזית קודמים לא זמינים'}
-
-תחזית עודכנה: ${timestamp}
-
-זוהי תחזית אוטומטית. התנאים עשויים להשתנות.`;
-
-          const eventDetails = {
-            title: degradedTitle,
-            description: degradedDescription,
-            startDateTime: existingEvent.start.dateTime,
-            endDateTime: existingEvent.end.dateTime,
-            date: dateStr
-          };
-
-          await googleCalendar.createOrUpdateEvent(auth, eventDetails);
+          try {
+            await googleCalendar.deleteEvent(auth, existingEvent.id);
+            console.log(`     ✓ Event deleted`);
+          } catch (error) {
+            console.log(`     ✗ Failed to delete event: ${error.message}`);
+          }
         } else {
           // אין אירוע קיים או שהוא כבר מסומן כמוחלש - אל תעשה כלום
           console.log(`  ❌ No good surf conditions - no action needed`);
