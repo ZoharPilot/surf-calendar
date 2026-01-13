@@ -1,0 +1,42 @@
+name: Update Surf Calendar
+
+on:
+  schedule:
+    - cron: '0 4,16 * * *'  # 4:00 ו-16:00 UTC = 6:00 ו-18:00 ישראל
+  workflow_dispatch:        # אפשר להריץ ידנית דרך GitHub
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run surf calendar update
+      run: npm start
+      env:
+        GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+        GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        STORMGLASS_API_KEY: ${{ secrets.STORMGLASS_API_KEY }}
+        HERZLIYA_LAT: ${{ secrets.HERZLIYA_LAT }}
+        HERZLIYA_LON: ${{ secrets.HERZLIYA_LON }}
+        TIMEZONE: ${{ secrets.TIMEZONE }}
+        MIN_WAVE_HEIGHT: ${{ secrets.MIN_WAVE_HEIGHT }}
+        MAX_WAVE_HEIGHT: ${{ secrets.MAX_WAVE_HEIGHT }}
+        MIN_WAVE_PERIOD: ${{ secrets.MIN_WAVE_PERIOD }}
+        MAX_WIND_SPEED: ${{ secrets.MAX_WIND_SPEED }}
+        MORNING_START: ${{ secrets.MORNING_START }}
+        MORNING_END: ${{ secrets.MORNING_END }}
+        EVENING_START: ${{ secrets.EVENING_START }}
+        EVENING_END: ${{ secrets.EVENING_END }}
+        FORECAST_HORIZON_HOURS: ${{ secrets.FORECAST_HORIZON_HOURS }}

@@ -1,0 +1,19 @@
+{
+  "name": "surf-calendar-mvp",
+  "version": "1.0.0",
+  "main": "surf-calendar.js",
+  "scripts": {
+    "start": "node surf-calendar.js",
+    "test": "node test-dry-run.js",
+    "dry-run": "node test-dry-run.js"
+  },
+  "keywords": ["surf", "forecast", "calendar", "stormglass", "google-calendar"],
+  "author": "",
+  "license": "ISC",
+  "description": "Surf Calendar MVP - Automated surf forecasting for Herzliya, Israel",
+  "dependencies": {
+    "axios": "^1.13.2",
+    "dotenv": "^17.2.3",
+    "googleapis": "^170.0.0"
+  }
+}
