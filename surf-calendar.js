@@ -150,8 +150,10 @@ async function processForecast() {
   let forecast;
 
   try {
-    // בדוק אם יש קובץ שמור ו-cache מופעל
-    if (config.cache.enabled && fs.existsSync(config.cache.file)) {
+    // בדוק אם יש קובץ שמור ו-cache מופעל (לא ב-CI)
+    const useCache = config.cache.enabled && !process.env.CI && fs.existsSync(config.cache.file);
+    
+    if (useCache) {
       console.log('Using cached forecast data...\n');
       const fileData = fs.readFileSync(config.cache.file, 'utf8');
       forecast = JSON.parse(fileData);
@@ -159,9 +161,13 @@ async function processForecast() {
       console.log('Fetching fresh forecast from Storm Glass...');
       forecast = await getForecast();
 
-      // שמור לקובץ
-      fs.writeFileSync(config.cache.file, JSON.stringify(forecast, null, 2));
-      console.log('Forecast saved to cache.\n');
+      // שמור לקובץ (רק אם לא ב-CI)
+      if (!process.env.CI) {
+        fs.writeFileSync(config.cache.file, JSON.stringify(forecast, null, 2));
+        console.log('Forecast saved to cache.\n');
+      } else {
+        console.log('Fresh forecast fetched (not cached in CI).\n');
+      }
     }
 
     // קבל אישור לגוגל קלנדר
