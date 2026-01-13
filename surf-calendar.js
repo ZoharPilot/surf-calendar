@@ -3,6 +3,7 @@ const axios = require('axios');
 const config = require('./config');
 const fs = require('fs');
 const googleCalendar = require('./google-calendar');
+const surfQuality = require('./surf-quality-scoring');
 
 // פונקציה להמרת כיוון רוח למטריקס למחרוזת בעברית
 function getWindDirectionText(degrees) {
@@ -41,20 +42,23 @@ async function getForecast() {
   }
 }
 
-// בדיקה אם תנאים עומדים בסף האיכות
-function meetsQualityThreshold(waveHeight, wavePeriod, windSpeed) {
-  return (
-    waveHeight >= config.thresholds.minWaveHeight &&
-    waveHeight <= config.thresholds.maxWaveHeight &&
-    wavePeriod >= config.thresholds.minWavePeriod &&
-    windSpeed <= config.thresholds.maxWindSpeed
-  );
+// בדיקה אם תנאים עומדים בסף האיכות (משתמש במערכת הניקוד החדשה)
+function meetsQualityThreshold(waveHeight, wavePeriod, windSpeed, windDirection = 0) {
+  const conditions = { waveHeight, wavePeriod, windSpeed, windDirection };
+  const qualityResult = surfQuality.calculateSurfQuality(conditions, config);
+  return surfQuality.isQualityScoreAcceptable(qualityResult, config.minQualityScore);
 }
 
-// בדיקה אם חלון זמן הוא בחלון גלישה
-function isInSurfWindow(hourTime, windowStart, windowEnd) {
-  const [startHour, startMin] = windowStart.split(':').map(Number);
-  const [endHour, endMin] = windowEnd.split(':').map(Number);
+// חישוב ציון איכות לשעה (משתמש במערכת הניקוד)
+function calculateQualityScore(waveHeight, wavePeriod, windSpeed, windDirection) {
+  const conditions = { waveHeight, wavePeriod, windSpeed, windDirection };
+  return surfQuality.calculateSurfQuality(conditions, config);
+}
+
+// בדיקה אם שעה היא בטווח שעות הגלישה היומי
+function isInDailySurfHours(hourTime) {
+  const [startHour, startMin] = config.dailySurfHours.start.split(':').map(Number);
+  const [endHour, endMin] = config.dailySurfHours.end.split(':').map(Number);
 
   const windowStartMinutes = startHour * 60 + startMin;
   const windowEndMinutes = endHour * 60 + endMin;
@@ -77,15 +81,8 @@ function calculateWeightedAverage(hourData, weights) {
   return totalWeight > 0 ? weightedSum / totalWeight : 0;
 }
 
-// חישוב ממוצע של שעות בחלון זמן
-function calculateWindowAverage(hours, windowStart, windowEnd) {
-  const windowHours = hours.filter(hour => {
-    const hourTime = new Date(hour.time);
-    return isInSurfWindow(hourTime, windowStart, windowEnd);
-  });
-
-  if (windowHours.length === 0) return null;
-
+// מציאת השעה הטובה ביותר ביום + בדיקת אפשרות ליצור חלון של 3 שעות
+function findBestSurfWindow(dayHours) {
   // משקלים לספקי תחזית - NOAA מקבל משקל גבוה יותר
   const weights = {
     'noaa': 0.7,    // 70% - ספק מועדף
@@ -93,24 +90,133 @@ function calculateWindowAverage(hours, windowStart, windowEnd) {
     'sg': 0.15      // 15%
   };
 
-  // חשב ממוצע משוקלל לכל שעה, ואז קח את המקסימום
-  const waveHeightAverages = windowHours.map(h => calculateWeightedAverage(h.waveHeight, weights));
-  const wavePeriodAverages = windowHours.map(h => calculateWeightedAverage(h.wavePeriod, weights));
-  const windSpeedAverages = windowHours.map(h => calculateWeightedAverage(h.windSpeed, weights));
+  // סנן רק שעות שבטווח הגלישה היומי
+  const validHours = dayHours.filter(hour => {
+    const hourTime = new Date(hour.time);
+    return isInDailySurfHours(hourTime);
+  });
 
-  // משתמש בערך המקסימלי כדי להיות יותר אופטימי
-  const avgWaveHeight = Math.max(...waveHeightAverages);
-  const avgWavePeriod = Math.max(...wavePeriodAverages);
-  const avgWindSpeed = Math.max(...windSpeedAverages);
+  if (validHours.length === 0) return null;
 
-  // קח את כיוון הרוח מהשעה הראשונה (הכי מייצג)
+  // חשב ציון לכל שעה (משתמש במערכת הניקוד החדשה)
+  const hoursWithScores = validHours.map(hour => {
+    const waveHeight = calculateWeightedAverage(hour.waveHeight, weights);
+    const wavePeriod = calculateWeightedAverage(hour.wavePeriod, weights);
+    const windSpeed = calculateWeightedAverage(hour.windSpeed, weights);
+    const windDirection = Object.values(hour.windDirection)[0];
+
+    // חשב ציון איכות מלא למערכת הניקוד החדשה
+    const qualityResult = calculateQualityScore(waveHeight, wavePeriod, windSpeed, windDirection);
+
+    return {
+      time: new Date(hour.time),
+      waveHeight,
+      wavePeriod,
+      windSpeed,
+      windDirection,
+      score: qualityResult.score, // ציון איכות כולל (0-100)
+      qualityBreakdown: qualityResult.breakdown // פירוט הציון
+    };
+  });
+
+  // מיין לפי ציון מהגבוה לנמוך
+  hoursWithScores.sort((a, b) => b.score - a.score);
+
+  // נסה למצוא חלון של 3 שעות סביב השעה הטובה ביותר
+  for (const bestHour of hoursWithScores) {
+    // בדוק אם השעה הזו עומדת בסף האיכות
+    if (!meetsQualityThreshold(bestHour.waveHeight, bestHour.wavePeriod, bestHour.windSpeed, bestHour.windDirection)) {
+      continue;
+    }
+
+    // נסה ליצור חלון של 3 שעות
+    const eventWindow = createThreeHourWindow(bestHour.time, validHours, weights);
+
+    if (eventWindow) {
+      return eventWindow;
+    }
+  }
+
+  return null;
+}
+
+// יצירת חלון של 3 שעות סביב שעה נתונה
+function createThreeHourWindow(centerTime, allHours, weights) {
+  const [startHour, startMin] = config.dailySurfHours.start.split(':').map(Number);
+  const [endHour, endMin] = config.dailySurfHours.end.split(':').map(Number);
+
+  const dayStartMinutes = startHour * 60 + startMin;
+  const dayEndMinutes = endHour * 60 + endMin;
+  const centerMinutes = centerTime.getHours() * 60 + centerTime.getMinutes();
+
+  // חשב את טווח החלון (3 שעות = 180 דקות)
+  const eventDurationMinutes = config.eventDuration * 60;
+
+  // נסה שעה לפני ושעתיים אחרי (סביב המרכז)
+  let startMinutes = centerMinutes - 60;
+  let endMinutes = startMinutes + eventDurationMinutes;
+
+  // התאם אם יוצאים מגבולות היום
+  if (startMinutes < dayStartMinutes) {
+    // צמוד לתחילת היום
+    startMinutes = dayStartMinutes;
+    endMinutes = startMinutes + eventDurationMinutes;
+  }
+
+  if (endMinutes > dayEndMinutes) {
+    // צמוד לסוף היום
+    endMinutes = dayEndMinutes;
+    startMinutes = endMinutes - eventDurationMinutes;
+  }
+
+  // וודא שאנחנו עדיין בטווח אחרי ההתאמות
+  if (startMinutes < dayStartMinutes || endMinutes > dayEndMinutes) {
+    return null; // לא מספיק מקום ליצור חלון של 3 שעות
+  }
+
+  // מצא את כל השעות בטווח הזה
+  const windowHours = allHours.filter(hour => {
+    const hourTime = new Date(hour.time);
+    const hourMinutes = hourTime.getHours() * 60 + hourTime.getMinutes();
+    return hourMinutes >= startMinutes && hourMinutes < endMinutes;
+  });
+
+  // חשב ממוצעים לחלון
+  const waveHeights = windowHours.map(h => calculateWeightedAverage(h.waveHeight, weights));
+  const wavePeriods = windowHours.map(h => calculateWeightedAverage(h.wavePeriod, weights));
+  const windSpeeds = windowHours.map(h => calculateWeightedAverage(h.windSpeed, weights));
+  const windDirections = windowHours.map(h => Object.values(h.windDirection)[0]);
+
+  // בדוק שכל השעות עומדות בסף האיכות
+  for (let i = 0; i < windowHours.length; i++) {
+    if (!meetsQualityThreshold(waveHeights[i], wavePeriods[i], windSpeeds[i], windDirections[i])) {
+      return null; // אחת השעות לא עומדת בקריטריונים
+    }
+  }
+
+  // קח את הערכים הממוצעים
+  const avgWaveHeight = waveHeights.reduce((a, b) => a + b, 0) / waveHeights.length;
+  const avgWavePeriod = wavePeriods.reduce((a, b) => a + b, 0) / wavePeriods.length;
+  const avgWindSpeed = windSpeeds.reduce((a, b) => a + b, 0) / windSpeeds.length;
   const windDirection = Object.values(windowHours[0].windDirection)[0];
+
+  // צור את זמני האירוע
+  const date = new Date(centerTime);
+  date.setHours(0, 0, 0, 0);
+
+  const eventStart = new Date(date);
+  eventStart.setMinutes(startMinutes);
+
+  const eventEnd = new Date(date);
+  eventEnd.setMinutes(endMinutes);
 
   return {
     waveHeight: avgWaveHeight,
     wavePeriod: avgWavePeriod,
     windSpeed: avgWindSpeed,
     windDirection: windDirection,
+    startTime: eventStart,
+    endTime: eventEnd,
     hourCount: windowHours.length
   };
 }
@@ -129,13 +235,26 @@ function createEventDescription(forecastData, timestamp) {
     windAssessment = ' (onshore)';
   }
 
-  return `חלון גלישה טוב בהרצליה
+  // קבל המלצות לפי תנאי הגלישה
+  const recommendations = surfQuality.getSurfingRecommendations(
+    forecastData.waveHeight,
+    forecastData.windSpeed,
+    forecastData.windDirection
+  );
+
+  const waveHeightFeet = (forecastData.waveHeight * 3.28).toFixed(1);
+
+  return `${recommendations.emoji} חלון גלישה - ${recommendations.levelHebrew}
 
 נתונים:
-• גובה גל: ${forecastData.waveHeight.toFixed(1)} מטר (${(forecastData.waveHeight * 3.28).toFixed(1)} פיט)
+• גובה גל: ${forecastData.waveHeight.toFixed(1)} מטר (${waveHeightFeet} פיט)
 • תקופה: ${Math.round(forecastData.wavePeriod)} שניות
 • רוח: ${windDirectionText} ${Math.round(forecastData.windSpeed)} קשר${windAssessment}
-• עודכן לאחרונה: ${timestamp}
+
+${recommendations.recommendation}
+מתאים ל: ${recommendations.audienceHebrew}
+
+• תחזית נכון ל-: ${timestamp}
 
 תחזית אוטומטית. התנאים עשויים להשתנות.
 יש לבדוק את מצב הים בשטח.`;
@@ -197,33 +316,8 @@ async function processForecast() {
 
       console.log(`\n📅 Processing ${date.toLocaleDateString('he-IL')}`);
 
-      // חשב ממוצעים לחלונות
-      const morningAvg = calculateWindowAverage(dayHours, config.timeWindows.morning.start, config.timeWindows.morning.end);
-      const afternoonAvg = calculateWindowAverage(dayHours, config.timeWindows.afternoon.start, config.timeWindows.afternoon.end);
-      const eveningAvg = calculateWindowAverage(dayHours, config.timeWindows.evening.start, config.timeWindows.evening.end);
-
-      // קבע איזה חלון לבחור - בחר את התנאים הטובים ביותר מבין כל החלונות שטובים
-      let selectedWindow = null;
-      let windowType = null;
-      let bestWaveHeight = 0;
-
-      // בדוק כל חלון ובחר את הטוב ביותר
-      const windows = [
-        { avg: morningAvg, type: 'morning' },
-        { avg: afternoonAvg, type: 'afternoon' },
-        { avg: eveningAvg, type: 'evening' }
-      ];
-
-      for (const { avg, type } of windows) {
-        if (avg && meetsQualityThreshold(avg.waveHeight, avg.wavePeriod, avg.windSpeed)) {
-          // בחר לפי גובה הגל הגבוה ביותר
-          if (avg.waveHeight > bestWaveHeight) {
-            selectedWindow = avg;
-            windowType = type;
-            bestWaveHeight = avg.waveHeight;
-          }
-        }
-      }
+      // מצא את חלון הגלישה הטוב ביותר ביום
+      const bestWindow = findBestSurfWindow(dayHours);
 
       // בדוק אם יש אירוע קיים
       const existingEvents = await googleCalendar.getExistingEvents(auth, date);
@@ -237,35 +331,21 @@ async function processForecast() {
         minute: '2-digit'
       });
 
-      if (selectedWindow) {
+      if (bestWindow) {
         // יש תנאים טובים
-        const title = 'חלון גלישה טוב - הרצליה';
-        const description = createEventDescription(selectedWindow, timestamp);
-
-        // קבע זמני אירוע
-        let windowConfig;
-        if (windowType === 'morning') {
-          windowConfig = config.timeWindows.morning;
-        } else if (windowType === 'afternoon') {
-          windowConfig = config.timeWindows.afternoon;
-        } else {
-          windowConfig = config.timeWindows.evening;
-        }
-
-        const [startHour, startMin] = windowConfig.start.split(':');
-        const [endHour, endMin] = windowConfig.end.split(':');
-
-        const eventStart = new Date(date);
-        eventStart.setHours(parseInt(startHour), parseInt(startMin), 0, 0);
-
-        const eventEnd = new Date(date);
-        eventEnd.setHours(parseInt(endHour), parseInt(endMin), 0, 0);
+        const recommendations = surfQuality.getSurfingRecommendations(
+          bestWindow.waveHeight,
+          bestWindow.windSpeed,
+          bestWindow.windDirection
+        );
+        const title = `${recommendations.emoji} חלון גלישה - ${recommendations.levelHebrew}`;
+        const description = createEventDescription(bestWindow, timestamp);
 
         const eventDetails = {
           title: title,
           description: description,
-          startDateTime: eventStart.toISOString(),
-          endDateTime: eventEnd.toISOString(),
+          startDateTime: bestWindow.startTime.toISOString(),
+          endDateTime: bestWindow.endTime.toISOString(),
           date: dateStr
         };
 
@@ -281,12 +361,14 @@ async function processForecast() {
           }
         } else {
           // יצירת אירוע חדש
-          console.log(`  ✅ Creating new surf window event (${windowType})`);
+          const startTime = bestWindow.startTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+          const endTime = bestWindow.endTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+          console.log(`  ✅ Creating new surf window event (${startTime}-${endTime})`);
           await googleCalendar.createOrUpdateEvent(auth, eventDetails);
         }
 
-        console.log(`     Wave: ${selectedWindow.waveHeight.toFixed(1)}m @ ${Math.round(selectedWindow.wavePeriod)}s`);
-        console.log(`     Wind: ${getWindDirectionText(selectedWindow.windDirection)} ${Math.round(selectedWindow.windSpeed)} knots`);
+        console.log(`     Wave: ${bestWindow.waveHeight.toFixed(1)}m @ ${Math.round(bestWindow.wavePeriod)}s`);
+        console.log(`     Wind: ${getWindDirectionText(bestWindow.windDirection)} ${Math.round(bestWindow.windSpeed)} knots`);
 
       } else {
         // אין תנאים טובים
@@ -350,7 +432,9 @@ if (require.main === module) {
 module.exports = {
   processForecast,
   meetsQualityThreshold,
-  calculateWindowAverage,
+  calculateQualityScore,
+  findBestSurfWindow,
+  createThreeHourWindow,
   getWindDirectionText,
   createEventDescription
 };

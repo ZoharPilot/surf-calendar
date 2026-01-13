@@ -9,29 +9,50 @@ module.exports = {
     timezone: process.env.TIMEZONE || 'Asia/Jerusalem'
   },
 
-  // Surf quality thresholds
-  thresholds: {
+  // Hard requirements (must meet these or rejected completely)
+  hardRequirements: {
     minWaveHeight: parseFloat(process.env.MIN_WAVE_HEIGHT || '0.3'),
     maxWaveHeight: parseFloat(process.env.MAX_WAVE_HEIGHT || '2.5'),
     minWavePeriod: parseFloat(process.env.MIN_WAVE_PERIOD || '6'),
     maxWindSpeed: parseFloat(process.env.MAX_WIND_SPEED || '8')
   },
 
-  // Surf time windows
-  timeWindows: {
-    morning: {
-      start: process.env.MORNING_START || '06:00',
-      end: process.env.MORNING_END || '10:00'
+  // Optimal ranges for quality scoring
+  optimalRanges: {
+    waveHeight: {
+      min: parseFloat(process.env.OPTIMAL_WAVE_HEIGHT_MIN || '0.8'),
+      max: parseFloat(process.env.OPTIMAL_WAVE_HEIGHT_MAX || '1.5')
     },
-    afternoon: {
-      start: process.env.AFTERNOON_START || '11:00',
-      end: process.env.AFTERNOON_END || '15:00'
+    wavePeriod: {
+      min: parseFloat(process.env.OPTIMAL_WAVE_PERIOD_MIN || '8'),
+      max: parseFloat(process.env.OPTIMAL_WAVE_PERIOD_MAX || '12')
     },
-    evening: {
-      start: process.env.EVENING_START || '16:00',
-      end: process.env.EVENING_END || '19:00'
+    windSpeed: {
+      perfect: parseFloat(process.env.OPTIMAL_WIND_SPEED_PERFECT || '3'),
+      excellent: parseFloat(process.env.OPTIMAL_WIND_SPEED_EXCELLENT || '5'),
+      acceptable: parseFloat(process.env.OPTIMAL_WIND_SPEED_ACCEPTABLE || '8')
     }
   },
+
+  // Weights for quality scoring (must sum to 1.0)
+  qualityWeights: {
+    waveHeight: parseFloat(process.env.WEIGHT_WAVE_HEIGHT || '0.40'),
+    wavePeriod: parseFloat(process.env.WEIGHT_WAVE_PERIOD || '0.30'),
+    windSpeed: parseFloat(process.env.WEIGHT_WIND_SPEED || '0.20'),
+    windDirection: parseFloat(process.env.WEIGHT_WIND_DIRECTION || '0.10')
+  },
+
+  // Minimum quality score to consider creating an event (0-100)
+  minQualityScore: parseInt(process.env.MIN_QUALITY_SCORE || '65'),
+
+  // Daily surf hours range (when surfing is possible)
+  dailySurfHours: {
+    start: process.env.SURF_DAY_START || '06:00',
+    end: process.env.SURF_DAY_END || '18:00'
+  },
+
+  // Event duration in hours
+  eventDuration: parseInt(process.env.EVENT_DURATION_HOURS || '3'),
 
   // Google Calendar
   calendar: {
