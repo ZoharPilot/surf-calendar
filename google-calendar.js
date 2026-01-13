@@ -34,10 +34,6 @@ async function authorize() {
     throw err;
   }
 }
-  }
-}
-  }
-}
 
 // קבל רשימת אירועים קיימים ליום מסוים
 async function getExistingEvents(auth, date) {
