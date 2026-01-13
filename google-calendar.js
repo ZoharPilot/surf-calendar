@@ -4,12 +4,22 @@ const { google } = require('googleapis');
 const config = require('./config');
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
-const CREDENTIALS_PATH = path.join(__dirname, config.calendar.serviceAccountKey);
 
 // טען והרשם עם Service Account
 async function authorize() {
   try {
-    const credentials = JSON.parse(await fs.readFile(CREDENTIALS_PATH));
+    let credentials;
+    const keyValue = config.calendar.serviceAccountKey;
+    
+    if (keyValue.startsWith('{')) {
+      // אם זה JSON string (מ-GitHub secret)
+      credentials = JSON.parse(keyValue);
+    } else {
+      // אם זה נתיב לקובץ (לוקאלי)
+      const CREDENTIALS_PATH = path.join(__dirname, keyValue);
+      credentials = JSON.parse(await fs.readFile(CREDENTIALS_PATH));
+    }
+    
     const auth = new google.auth.GoogleAuth({
       credentials: credentials,
       scopes: SCOPES,
@@ -18,6 +28,8 @@ async function authorize() {
   } catch (err) {
     console.error('Error loading service account credentials:', err);
     throw err;
+  }
+}
   }
 }
 
