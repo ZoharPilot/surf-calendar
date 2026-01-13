@@ -14,6 +14,10 @@ async function authorize() {
     if (keyValue.startsWith('{')) {
       // אם זה JSON string (מ-GitHub secret)
       credentials = JSON.parse(keyValue);
+    } else if (keyValue.length > 100) {
+      // אם זה base64 (מומלץ ל-GitHub)
+      const decoded = Buffer.from(keyValue, 'base64').toString('utf8');
+      credentials = JSON.parse(decoded);
     } else {
       // אם זה נתיב לקובץ (לוקאלי)
       const CREDENTIALS_PATH = path.join(__dirname, keyValue);
@@ -28,6 +32,8 @@ async function authorize() {
   } catch (err) {
     console.error('Error loading service account credentials:', err);
     throw err;
+  }
+}
   }
 }
   }
