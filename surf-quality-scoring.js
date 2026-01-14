@@ -65,34 +65,32 @@ function meetsHardRequirements(conditions, config) {
 
 /**
  * חישוב תקופת גל מינימלית נדרשת בהתאם לגובה הגל
- * גלים גבוהים יותר דורשים תקופה ארוכה יותר, אבל נהיה יותר סלחניים
- * כי במציאות גלים בישראל לרוב קצרים יותר
+ *
+ * עקרון חשוב: swellHeight הוא נתון offshore, לא surf height!
+ * תקופה קצרה (<7s) = wind chop, לא swell איכותי לגלישה
+ * גל גבוה עם תקופה קצרה = תנאים גרועים (choppy)
  */
 function calculateMinPeriodForHeight(waveHeight, thresholds) {
-  const basePeriod = thresholds.minWavePeriod;
+  const basePeriod = thresholds.minWavePeriod; // Default: 6s (but should be 7s)
 
-  // גלים נמוכים (עד 0.7m) - תקופה קצרה בסדר
-  if (waveHeight < 0.7) {
-    return Math.max(basePeriod - 2, 4); // מינימום 4 שניות
+  // גלים קטנים (עד 0.8m / 2.6ft) - סף מינימלי 6s
+  if (waveHeight < 0.8) {
+    return Math.max(basePeriod, 6);
   }
 
-  // גלים בינוניים נמוכים (0.7-1.2m) - תקופה קצרה יותר מהבסיס
-  if (waveHeight < 1.2) {
-    return Math.max(basePeriod - 1.5, 5); // 1.5 שניות פחות מהבסיס
+  // גלים בינוניים (0.8-1.5m / 2.6-5ft) - נדרשת תקופה של לפחות 7s
+  if (waveHeight < 1.5) {
+    return Math.max(basePeriod, 7);
   }
 
-  // גלים בינוניים גבוהים (1.2-1.8m) - תקופה קצת קצרה יותר מהבסיס
-  if (waveHeight < 1.8) {
-    return Math.max(basePeriod - 0.5, 6); // חצי שנייה פחות מהבסיס
+  // גלים גבוהים (1.5-2.5m / 5-8ft) - נדרשת תקופה של לפחות 8s
+  if (waveHeight < 2.5) {
+    return Math.max(basePeriod + 2, 8);
   }
 
-  // גלים גבוהים (1.8-2.2m) - תקופה בסיסית
-  if (waveHeight < 2.2) {
-    return basePeriod;
-  }
-
-  // גלים גבוהים מאוד (2.2+) - דורש תקופה ארוכה יותר
-  return basePeriod + 1;
+  // גלים גבוהים מאוד (2.5m+ / 8ft+) - נדרשת תקופה ארוכה (10s+)
+  // אחרת זה סתם wind chop מסוכן
+  return Math.max(basePeriod + 4, 10);
 }
 
 /**

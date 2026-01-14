@@ -35,11 +35,12 @@ module.exports = {
   },
 
   // Weights for quality scoring (must sum to 1.0)
+  // Period is MOST important - offshore swell with short period = wind chop
   qualityWeights: {
-    waveHeight: parseFloat(process.env.WEIGHT_WAVE_HEIGHT || '0.40'),
-    wavePeriod: parseFloat(process.env.WEIGHT_WAVE_PERIOD || '0.30'),
-    windSpeed: parseFloat(process.env.WEIGHT_WIND_SPEED || '0.20'),
-    windDirection: parseFloat(process.env.WEIGHT_WIND_DIRECTION || '0.10')
+    wavePeriod: parseFloat(process.env.WEIGHT_WAVE_PERIOD || '0.50'),    // 50% - Most critical
+    waveHeight: parseFloat(process.env.WEIGHT_WAVE_HEIGHT || '0.30'),    // 30% - Important but secondary
+    windSpeed: parseFloat(process.env.WEIGHT_WIND_SPEED || '0.15'),      // 15% - Less critical (location-dependent)
+    windDirection: parseFloat(process.env.WEIGHT_WIND_DIRECTION || '0.05') // 5% - Least critical
   },
 
   // Minimum quality score to consider creating an event (0-100)

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node surf-calendar.js:*)",
+      "Bash(node -e:*)",
+      "Bash(node debug-jan15.js:*)",
+      "Bash(node test-recommendations.js:*)",
+      "Bash(node preview-event.js:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd advanced surf quality scoring system with recommendations\n\nFeatures:\n- New surf-quality-scoring.js module with comprehensive 0-100 scoring\n- Smart detection for Israeli surf patterns \\(shorter periods OK with higher waves\\)\n- Skill-based recommendations \\(beginner-friendly to extreme conditions\\)\n- Special handling for Marina Herzliya in extreme south wind conditions\n- Dynamic 3-hour surf windows instead of fixed time slots\n- Event titles and descriptions include difficulty level and target audience\n\nWave height categories:\n- <3ft: Beginner-friendly \\(recommend volume boards\\)\n- 3-5ft: Optimal \\(all skill levels\\)\n- >5ft: Advanced surfers only\n- >8ft + 15kt wind: Extreme \\(Marina only if south wind\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git reset:*)",
+      "Bash(git commit:*)",
+      "Bash(git fetch:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}
