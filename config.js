@@ -73,7 +73,7 @@ module.exports = {
 
   // Cache settings
   cache: {
-    enabled: true,
+    enabled: false,
     file: 'forecast-cache-herzliya.json'
   }
 };
