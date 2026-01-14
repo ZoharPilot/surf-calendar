@@ -52,8 +52,8 @@ module.exports = {
     end: process.env.SURF_DAY_END || '18:00'
   },
 
-  // Event duration in hours
-  eventDuration: parseInt(process.env.EVENT_DURATION_HOURS || '3'),
+  // Event duration in hours (2 hours = more precise, more opportunities)
+  eventDuration: parseInt(process.env.EVENT_DURATION_HOURS || '2'),
 
   // Google Calendar
   calendar: {

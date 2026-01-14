@@ -140,7 +140,7 @@ function findBestSurfWindow(dayHours) {
   return null;
 }
 
-// יצירת חלון של 3 שעות סביב שעה נתונה
+// יצירת חלון גלישה סביב שעה נתונה (duration מוגדר ב-config)
 function createThreeHourWindow(centerTime, allHours, weights) {
   const [startHour, startMin] = config.dailySurfHours.start.split(':').map(Number);
   const [endHour, endMin] = config.dailySurfHours.end.split(':').map(Number);
@@ -149,11 +149,13 @@ function createThreeHourWindow(centerTime, allHours, weights) {
   const dayEndMinutes = endHour * 60 + endMin;
   const centerMinutes = centerTime.getHours() * 60 + centerTime.getMinutes();
 
-  // חשב את טווח החלון (3 שעות = 180 דקות)
   const eventDurationMinutes = config.eventDuration * 60;
 
-  // נסה שעה לפני ושעתיים אחרי (סביב המרכז)
-  let startMinutes = centerMinutes - 60;
+  // מרכז החלון סביב השעה הטובה ביותר
+  // עבור 2 שעות: שעה לפני ושעה אחרי
+  // עבור 3 שעות: שעה לפני ושעתיים אחרי
+  const beforeMinutes = eventDurationMinutes <= 120 ? 60 : 60; // Always 1 hour before for now
+  let startMinutes = centerMinutes - beforeMinutes;
   let endMinutes = startMinutes + eventDurationMinutes;
 
   // התאם אם יוצאים מגבולות היום
