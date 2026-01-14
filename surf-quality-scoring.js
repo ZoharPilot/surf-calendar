@@ -84,8 +84,9 @@ function calculateMinPeriodForHeight(waveHeight, thresholds) {
   }
 
   // גלים גבוהים (1.5-2.5m / 5-8ft) - נדרשת תקופה של לפחות 8s
+  // Use fixed 8s threshold, not basePeriod+2 which could be 9s
   if (waveHeight < 2.5) {
-    return Math.max(basePeriod + 2, 8);
+    return 8;
   }
 
   // גלים גבוהים מאוד (2.5m+ / 8ft+) - נדרשת תקופה ארוכה (10s+)

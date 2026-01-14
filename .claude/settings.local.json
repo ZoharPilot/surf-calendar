@@ -11,7 +11,10 @@
       "Bash(git reset:*)",
       "Bash(git commit:*)",
       "Bash(git fetch:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(for hour in 12 13 14 15 16)",
+      "Bash(do)",
+      "Bash(done)"
     ]
   }
 }
