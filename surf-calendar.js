@@ -296,14 +296,24 @@ async function processForecast() {
     const now = new Date();
     const horizonEnd = new Date(now.getTime() + (config.forecast.horizonHours * 60 * 60 * 1000));
 
-    // קבץ שעות לפי יום
+    // קבץ שעות לפי יום (ממיר swellHeight/swellPeriod ל-waveHeight/wavePeriod)
     const dailyHours = {};
     forecast.hours.forEach(hour => {
       const hourTime = new Date(hour.time);
       if (hourTime >= now && hourTime <= horizonEnd) {
         const dateStr = hourTime.toISOString().split('T')[0];
         if (!dailyHours[dateStr]) dailyHours[dateStr] = [];
-        dailyHours[dateStr].push(hour);
+
+        // ממיר swellHeight/swellPeriod ל-waveHeight/wavePeriod למען עקביות בקוד
+        const normalizedHour = {
+          time: hour.time,
+          waveHeight: hour.swellHeight || hour.waveHeight,  // משתמש ב-swellHeight, נופל ל-waveHeight אם לא קיים
+          wavePeriod: hour.swellPeriod || hour.wavePeriod,  // משתמש ב-swellPeriod, נופל ל-wavePeriod אם לא קיים
+          windSpeed: hour.windSpeed,
+          windDirection: hour.windDirection
+        };
+
+        dailyHours[dateStr].push(normalizedHour);
       }
     });
 

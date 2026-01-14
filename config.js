@@ -63,7 +63,7 @@ module.exports = {
   // Storm Glass API
   stormGlass: {
     apiKey: process.env.STORMGLASS_API_KEY,
-    params: 'waveHeight,wavePeriod,windSpeed,windDirection'
+    params: 'swellHeight,swellPeriod,windSpeed,windDirection'
   },
 
   // Forecast settings
@@ -73,7 +73,7 @@ module.exports = {
 
   // Cache settings
   cache: {
-    enabled: false,
+    enabled: true,
     file: 'forecast-cache-herzliya.json'
   }
 };
