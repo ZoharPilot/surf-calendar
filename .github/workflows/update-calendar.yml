@@ -25,18 +25,20 @@ jobs:
     - name: Run surf calendar update
       run: npm start
       env:
+        # Required secrets
         GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
         GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
         STORMGLASS_API_KEY: ${{ secrets.STORMGLASS_API_KEY }}
+
+        # Location (optional - has defaults)
         HERZLIYA_LAT: ${{ secrets.HERZLIYA_LAT }}
         HERZLIYA_LON: ${{ secrets.HERZLIYA_LON }}
         TIMEZONE: ${{ secrets.TIMEZONE }}
-        MIN_WAVE_HEIGHT: ${{ secrets.MIN_WAVE_HEIGHT }}
-        MAX_WAVE_HEIGHT: ${{ secrets.MAX_WAVE_HEIGHT }}
-        MIN_WAVE_PERIOD: ${{ secrets.MIN_WAVE_PERIOD }}
-        MAX_WIND_SPEED: ${{ secrets.MAX_WIND_SPEED }}
-        MORNING_START: ${{ secrets.MORNING_START }}
-        MORNING_END: ${{ secrets.MORNING_END }}
-        EVENING_START: ${{ secrets.EVENING_START }}
-        EVENING_END: ${{ secrets.EVENING_END }}
-        FORECAST_HORIZON_HOURS: ${{ secrets.FORECAST_HORIZON_HOURS }}
+
+        # Tuning parameters (optional - code has good defaults now)
+        # Uncomment if you want to override defaults
+        # MIN_WAVE_HEIGHT: ${{ secrets.MIN_WAVE_HEIGHT }}
+        # MAX_WAVE_HEIGHT: ${{ secrets.MAX_WAVE_HEIGHT }}
+        # MIN_WAVE_PERIOD: ${{ secrets.MIN_WAVE_PERIOD }}
+        # MAX_WIND_SPEED: ${{ secrets.MAX_WIND_SPEED }}
+        # FORECAST_HORIZON_HOURS: ${{ secrets.FORECAST_HORIZON_HOURS }}

@@ -14,7 +14,8 @@
       "Bash(git push:*)",
       "Bash(for hour in 12 13 14 15 16)",
       "Bash(do)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(gh run list:*)"
     ]
   }
 }
