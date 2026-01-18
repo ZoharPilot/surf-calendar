@@ -145,11 +145,16 @@ function createThreeHourWindow(centerTime, allHours, weights) {
   const [startHour, startMin] = config.dailySurfHours.start.split(':').map(Number);
   const [endHour, endMin] = config.dailySurfHours.end.split(':').map(Number);
 
+  // dailySurfHours are in local time, but forecast data is in UTC
+  // We need to work in local time throughout for proper boundary checking
+  const eventDurationMinutes = config.eventDuration * 60;
+
+  // Convert centerTime to local time minutes
+  const centerDate = new Date(centerTime);
+  const centerMinutes = centerDate.getHours() * 60 + centerDate.getMinutes();
+
   const dayStartMinutes = startHour * 60 + startMin;
   const dayEndMinutes = endHour * 60 + endMin;
-  const centerMinutes = centerTime.getHours() * 60 + centerTime.getMinutes();
-
-  const eventDurationMinutes = config.eventDuration * 60;
 
   // מרכז החלון סביב השעה הטובה ביותר
   // עבור 2 שעות: שעה לפני ושעה אחרי
@@ -165,23 +170,30 @@ function createThreeHourWindow(centerTime, allHours, weights) {
     endMinutes = startMinutes + eventDurationMinutes;
   }
 
-  if (endMinutes > dayEndMinutes) {
+  if (endMinutes >= dayEndMinutes) {
     // צמוד לסוף היום
-    endMinutes = dayEndMinutes;
+    // אם החלון יסתיים ב-18:00 או אחרי, זה מאוחר מידי (כבר חושך)
+    // לכן נסיים שעה לפני - מקסימום ב-17:00
+    endMinutes = dayEndMinutes - 60; // End 1 hour before dayEnd (17:00 instead of 18:00)
     startMinutes = endMinutes - eventDurationMinutes;
   }
 
   // וודא שאנחנו עדיין בטווח אחרי ההתאמות
   if (startMinutes < dayStartMinutes || endMinutes > dayEndMinutes) {
-    return null; // לא מספיק מקום ליצור חלון של 3 שעות
+    return null; // לא מספיק מקום ליצור חלון
   }
 
   // מצא את כל השעות בטווח הזה
+  // Compare in local time (both sides)
   const windowHours = allHours.filter(hour => {
     const hourTime = new Date(hour.time);
     const hourMinutes = hourTime.getHours() * 60 + hourTime.getMinutes();
     return hourMinutes >= startMinutes && hourMinutes < endMinutes;
   });
+
+  if (windowHours.length === 0) {
+    return null; // No hours in the window
+  }
 
   // חשב ממוצעים לחלון
   const waveHeights = windowHours.map(h => calculateWeightedAverage(h.waveHeight, weights));
@@ -202,15 +214,22 @@ function createThreeHourWindow(centerTime, allHours, weights) {
   const avgWindSpeed = windSpeeds.reduce((a, b) => a + b, 0) / windSpeeds.length;
   const windDirection = Object.values(windowHours[0].windDirection)[0];
 
-  // צור את זמני האירוע
+  // צור את זמני האירוע בזמן מקומי
+  // Get the date part from centerTime
   const date = new Date(centerTime);
   date.setHours(0, 0, 0, 0);
 
+  // Convert minutes to hours and minutes
+  const startHours = Math.floor(startMinutes / 60);
+  const startMins = startMinutes % 60;
+  const endHours = Math.floor(endMinutes / 60);
+  const endMins = endMinutes % 60;
+
   const eventStart = new Date(date);
-  eventStart.setMinutes(startMinutes);
+  eventStart.setHours(startHours, startMins, 0, 0);
 
   const eventEnd = new Date(date);
-  eventEnd.setMinutes(endMinutes);
+  eventEnd.setHours(endHours, endMins, 0, 0);
 
   return {
     waveHeight: avgWaveHeight,

@@ -58,7 +58,9 @@ function meetsHardRequirements(conditions, config) {
   // תקופה מינימלית - יותר גמיש
   // אם התקופה קצרה אבל הגל גבוה, עדיין עשוי להיות בסדר
   const minPeriodRequired = calculateMinPeriodForHeight(waveHeight, thresholds);
-  if (wavePeriod < minPeriodRequired) return false;
+  if (wavePeriod < minPeriodRequired) {
+    return false;
+  }
 
   return true;
 }
@@ -71,27 +73,28 @@ function meetsHardRequirements(conditions, config) {
  * גל גבוה עם תקופה קצרה = תנאים גרועים (choppy)
  */
 function calculateMinPeriodForHeight(waveHeight, thresholds) {
-  const basePeriod = thresholds.minWavePeriod; // Default: 6s (but should be 7s)
+  // Note: basePeriod from config is ignored here - we use fixed thresholds
+  // based on wave height to ensure consistent behavior regardless of user config
 
-  // גלים קטנים (עד 0.8m / 2.6ft) - סף מינימלי 6s
-  if (waveHeight < 0.8) {
-    return Math.max(basePeriod, 6);
+  // גלים קטנים (עד 0.82m / ~2.7ft) - סף מינימלי 6s
+  // נמוך מספיק כדי לכסות את הגלים שמגיעים לסף 0.8m אחרי weighted avg
+  if (waveHeight < 0.82) {
+    return 6;  // Fixed 6s for small waves
   }
 
-  // גלים בינוניים (0.8-1.5m / 2.6-5ft) - נדרשת תקופה של לפחות 7s
+  // גלים בינוניים (0.82-1.5m / 2.7-5ft) - נדרשת תקופה של לפחות 7s
   if (waveHeight < 1.5) {
-    return Math.max(basePeriod, 7);
+    return 7;  // Fixed 7s for medium waves
   }
 
   // גלים גבוהים (1.5-2.5m / 5-8ft) - נדרשת תקופה של לפחות 8s
-  // Use fixed 8s threshold, not basePeriod+2 which could be 9s
   if (waveHeight < 2.5) {
-    return 8;
+    return 8;  // Fixed 8s for large waves
   }
 
   // גלים גבוהים מאוד (2.5m+ / 8ft+) - נדרשת תקופה ארוכה (10s+)
   // אחרת זה סתם wind chop מסוכן
-  return Math.max(basePeriod + 4, 10);
+  return 10;  // Fixed 10s for very large waves
 }
 
 /**
