@@ -170,11 +170,14 @@ function createThreeHourWindow(centerTime, allHours, weights) {
     endMinutes = startMinutes + eventDurationMinutes;
   }
 
-  if (endMinutes >= dayEndMinutes) {
-    // צמוד לסוף היום
-    // אם החלון יסתיים ב-18:00 או אחרי, זה מאוחר מידי (כבר חושך)
-    // לכן נסיים שעה לפני - מקסימום ב-17:00
-    endMinutes = dayEndMinutes - 60; // End 1 hour before dayEnd (17:00 instead of 18:00)
+  // הגבלת שעת סיום מקסימלית - שעה לפני החושך
+  // dayEndMinutes = 18:00, אז maxEndMinutes = 17:00
+  const maxEndMinutes = dayEndMinutes - 60;
+
+  if (endMinutes > maxEndMinutes) {
+    // צמוד לשעת הסיום המקסימלית (17:00)
+    // כי אחרי 17:00 כבר מתחיל להחשיך
+    endMinutes = maxEndMinutes;
     startMinutes = endMinutes - eventDurationMinutes;
   }
 
