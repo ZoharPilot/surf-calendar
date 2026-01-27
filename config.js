@@ -69,7 +69,8 @@ module.exports = {
 
   // Forecast settings
   forecast: {
-    horizonHours: parseInt(process.env.FORECAST_HORIZON_HOURS || '48')
+    // Storm Glass provides up to 10 days (240 hours) of forecast data
+    horizonHours: parseInt(process.env.FORECAST_HORIZON_HOURS || '240')
   },
 
   // Cache settings
