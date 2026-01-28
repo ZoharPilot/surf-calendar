@@ -25,6 +25,9 @@ jobs:
     - name: Run surf calendar update
       run: npm start
       env:
+        # Set timezone to Israel for correct local time calculations
+        TZ: Asia/Jerusalem
+
         # Required secrets
         GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
         GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
