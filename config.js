@@ -47,10 +47,23 @@ module.exports = {
   minQualityScore: parseInt(process.env.MIN_QUALITY_SCORE || '65'),
 
   // Daily surf hours range (when surfing is possible)
-  dailySurfHours: {
-    start: process.env.SURF_DAY_START || '06:00',
-    end: process.env.SURF_DAY_END || '18:00'
-  },
+  // End time is dynamic by season (Israel sunset times):
+  //   Nov-Feb (winter):  end 18:00 → max event ends 17:00
+  //   Mar-Apr (spring):  end 20:00 → max event ends 19:00
+  //   May-Sep (summer):  end 21:00 → max event ends 20:00
+  //   Oct (transition):  end 19:00 → max event ends 18:00
+  dailySurfHours: (() => {
+    if (process.env.SURF_DAY_END) {
+      return { start: process.env.SURF_DAY_START || '06:00', end: process.env.SURF_DAY_END };
+    }
+    const month = new Date().getMonth() + 1; // 1-12
+    let end;
+    if (month >= 5 && month <= 9)      end = '21:00'; // May-Sep: light until ~20:00
+    else if (month >= 3 && month <= 4) end = '20:00'; // Mar-Apr (DST): light until ~19:00
+    else if (month === 10)             end = '19:00'; // Oct (transition): light until ~18:00
+    else                               end = '18:00'; // Nov-Feb: light until ~17:00
+    return { start: '06:00', end };
+  })(),
 
   // Event duration in hours (2 hours = more precise, more opportunities)
   eventDuration: parseInt(process.env.EVENT_DURATION_HOURS || '2'),
