@@ -2,7 +2,7 @@ name: Update Surf Calendar
 
 on:
   schedule:
-    - cron: '0 4,16 * * *'  # 4:00 ו-16:00 UTC = 6:00 ו-18:00 ישראל
+    - cron: '0 4,12,20 * * *'  # 4:00, 12:00, 20:00 UTC = 6:00, 14:00, 22:00 ישראל
   workflow_dispatch:        # אפשר להריץ ידנית דרך GitHub
 
 jobs:
