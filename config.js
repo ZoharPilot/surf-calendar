@@ -48,20 +48,22 @@ module.exports = {
 
   // Daily surf hours range (when surfing is possible)
   // End time is dynamic by season (Israel sunset times):
-  //   Nov-Feb (winter):  end 18:00 → max event ends 17:00
-  //   Mar-Apr (spring):  end 20:00 → max event ends 19:00
-  //   May-Sep (summer):  end 21:00 → max event ends 20:00
-  //   Oct (transition):  end 19:00 → max event ends 18:00
+  //   Nov-Feb:  max surf until 17:00 → end 18:00
+  //   Mar:      max surf until 18:00 → end 19:00  (DST starts Mar 27)
+  //   Apr:      max surf until 19:00 → end 20:00
+  //   May-Sep:  max surf until 20:00 → end 21:00
+  //   Oct:      max surf until 19:00 → end 20:00
   dailySurfHours: (() => {
     if (process.env.SURF_DAY_END) {
       return { start: process.env.SURF_DAY_START || '06:00', end: process.env.SURF_DAY_END };
     }
     const month = new Date().getMonth() + 1; // 1-12
     let end;
-    if (month >= 5 && month <= 9)      end = '21:00'; // May-Sep: light until ~20:00
-    else if (month >= 3 && month <= 4) end = '20:00'; // Mar-Apr (DST): light until ~19:00
-    else if (month === 10)             end = '19:00'; // Oct (transition): light until ~18:00
-    else                               end = '18:00'; // Nov-Feb: light until ~17:00
+    if (month >= 5 && month <= 9) end = '21:00'; // May-Sep: light until 20:00
+    else if (month === 4)         end = '20:00'; // Apr: light until 19:00
+    else if (month === 3)         end = '19:00'; // Mar: light until 18:00
+    else if (month === 10)        end = '20:00'; // Oct: light until 19:00
+    else                          end = '18:00'; // Nov-Feb: light until 17:00
     return { start: '06:00', end };
   })(),
 
