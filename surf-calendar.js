@@ -90,6 +90,14 @@ function findBestSurfWindow(dayHours) {
     'sg': 0.15      // 15%
   };
 
+  // משקלים נפרדים לתקופת גל - NOAA אמין הרבה יותר לתקופה מ-Meteo/SG
+  // Meteo ו-SG לרוב מדווחים תקופה נמוכה מאוד (wind chop local) במקום swell period
+  const periodWeights = {
+    'noaa': 0.9,    // 90% - NOAA הכי מדויק לתקופת swell
+    'meteo': 0.05,  // 5%
+    'sg': 0.05      // 5%
+  };
+
   // סנן רק שעות שבטווח הגלישה היומי
   const validHours = dayHours.filter(hour => {
     const hourTime = new Date(hour.time);
@@ -101,7 +109,7 @@ function findBestSurfWindow(dayHours) {
   // חשב ציון לכל שעה (משתמש במערכת הניקוד החדשה)
   const hoursWithScores = validHours.map(hour => {
     const waveHeight = calculateWeightedAverage(hour.waveHeight, weights);
-    const wavePeriod = calculateWeightedAverage(hour.wavePeriod, weights);
+    const wavePeriod = calculateWeightedAverage(hour.wavePeriod, periodWeights);
     const windSpeed = calculateWeightedAverage(hour.windSpeed, weights);
     const windDirection = Object.values(hour.windDirection)[0];
 
@@ -130,7 +138,7 @@ function findBestSurfWindow(dayHours) {
     }
 
     // נסה ליצור חלון של 3 שעות
-    const eventWindow = createThreeHourWindow(bestHour.time, validHours, weights);
+    const eventWindow = createThreeHourWindow(bestHour.time, validHours, weights, periodWeights);
 
     if (eventWindow) {
       return eventWindow;
@@ -141,7 +149,7 @@ function findBestSurfWindow(dayHours) {
 }
 
 // יצירת חלון גלישה סביב שעה נתונה (duration מוגדר ב-config)
-function createThreeHourWindow(centerTime, allHours, weights) {
+function createThreeHourWindow(centerTime, allHours, weights, periodWeights) {
   const [startHour, startMin] = config.dailySurfHours.start.split(':').map(Number);
   const [endHour, endMin] = config.dailySurfHours.end.split(':').map(Number);
 
@@ -200,7 +208,7 @@ function createThreeHourWindow(centerTime, allHours, weights) {
 
   // חשב ממוצעים לחלון
   const waveHeights = windowHours.map(h => calculateWeightedAverage(h.waveHeight, weights));
-  const wavePeriods = windowHours.map(h => calculateWeightedAverage(h.wavePeriod, weights));
+  const wavePeriods = windowHours.map(h => calculateWeightedAverage(h.wavePeriod, periodWeights));
   const windSpeeds = windowHours.map(h => calculateWeightedAverage(h.windSpeed, weights));
   const windDirections = windowHours.map(h => Object.values(h.windDirection)[0]);
 
